@@ -64,6 +64,7 @@ public class Parser {
     private ArrayList<String> labelsOfvaluesOfproperties() throws Exception {
         ArrayList<String> items = new ArrayList<>();
         
+        //Search 
         JSONArray result = wikidataItem.getJSONArray("search");
         JSONObject resultItem = result.getJSONObject(0);
         String ID = resultItem.getString("id");
@@ -72,41 +73,41 @@ public class Parser {
         JSONObject claims = itemObj.getJSONObject("claims");
         //GET numeric-IDs
         String labelsRequest = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&format=json&languages=en&ids=";
-        Iterator<?> keys = claims.keys();
+        Iterator<String> keys = claims.keys();
         while (keys.hasNext()) {
             JSONObject claim = claims.getJSONArray((String) keys.next()).getJSONObject(0);
             JSONObject mainsnak = claim.getJSONObject("mainsnak");
-            System.out.println("----key---- " + mainsnak);
             if (! mainsnak.has("datavalue")) {
-                System.out.println("NO datavalue");
                 continue;
             }
-            System.out.println("HAS datavalue");
             JSONObject datavalue = mainsnak.getJSONObject("datavalue");
             if (! datavalue.has("value")) {
-                System.out.println("NO value");
                 continue;
             }
-            System.out.println("HAS value");
-            System.out.println(datavalue);
-            System.out.println(datavalue.getJSONArray("value").getClass());
-            JSONArray value = datavalue.getJSONArray("value");                  // WHAT IS VALUE?
+            JSONObject value;
+            try {
+                value = datavalue.getJSONObject("value");
+            } catch (JSONException e) {
+                continue;
+            }
             if (! value.toString().contains("numeric-id")) {
-                System.out.println("NO n-id");
                 continue;
             }
-            System.out.println("HAS N-id");
-            labelsRequest = labelsRequest + "Q" + value.get(1) + "|";
+            String nID = value.get("numeric-id").toString();
+            
+            labelsRequest = labelsRequest + "Q" + nID + "|";
         }
         labelsRequest = labelsRequest.substring(0, labelsRequest.length() - 1);
-        System.out.println(labelsRequest);                                      //////
         String itemsLabels = getByURL(labelsRequest);
         JSONObject itemsLabelsObject = new JSONObject(itemsLabels);
-        JSONArray labels = itemsLabelsObject.getJSONArray("value");
-        for (int i = 0; i < labels.length(); i++) {
-            items.add(labels.getString(i));
+        JSONObject entities = itemsLabelsObject.getJSONObject("entities");
+        keys = entities.keys();
+        while (keys.hasNext()) {
+            items.add(entities.getJSONObject(keys.next()).getJSONObject("labels").getJSONObject("en").get("value").toString());
         }
-        System.out.println(items);                                              //////
+        System.out.println("labels:");
+        System.out.println(items);
+        
         return items;
     }
     
